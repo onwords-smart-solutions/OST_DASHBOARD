@@ -19,20 +19,17 @@ config = {
 
 firebase = pyrebase.initialize_app(config)
 db = firebase.database()
-print("db",db)
 auth = firebase.auth()
 
-#Define the directory where firmware files will be stored
 firmware_directory = '/firmware/3chfb'
 
 app.jinja_env.globals['cache'] = False
-# ...
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
     error_message = None
     device_data = {}
-    online_status = "Online"  # Default status
+    online_status = "Online"
 
     if request.method == 'POST':
         product_id = request.form.get('product_id')
@@ -40,21 +37,17 @@ def home():
         if not product_id:
             error_message = "Product ID is required."
         else:
-            # Check if the provided product ID exists in the database
             device_data = db.child("Devices").child(product_id).get().val()
 
             if not device_data:
                 error_message = "Product ID not found."
             else:
-                # Check if disconnected_time is available and not empty
                 disconnected_time = device_data.get('disconnected_time', {})
                 if disconnected_time:
-                    # Check if disconnected_time is not an empty string
                     if any(info.get('date') and info.get('time') and info.get('date') != '' and info.get('time') != '' for info in disconnected_time.values()):
                         online_status = "Offline"
 
     return render_template('home.html', device_data=device_data, error_message=error_message, online_status=online_status)
-
 
 @app.route('/upload_firmware', methods=['POST'])
 def upload_firmware():
@@ -66,19 +59,15 @@ def upload_firmware():
     firmware_file = request.files['firmware_file']
 
     if firmware_file:
-        # Create the firmware directory if it doesn't exist
         os.makedirs(firmware_directory, exist_ok=True)
-
-        # Save the uploaded file to the specified directory
+        
         new_firmware_ref = db.child("Devices").child(product_id).child("firmware").push({
             "filename": firmware_file.filename,
             "upload_date": datetime.date.today().strftime("%Y-%m-%d"),
             "version": "1.1.1"
         })
-
-        # Get the generated key from the reference
+        
         firmware_uid = new_firmware_ref["name"]
-
         firmware_file.save(os.path.join(firmware_directory, firmware_uid))
         print(f"Firmware file '{firmware_uid}' saved to {firmware_directory}")
 
@@ -90,8 +79,7 @@ def filter_devices():
 
     if not product_id_prefix:
         return render_template('home.html', error_message="Invalid request")
-
-    # Get devices with product IDs starting with the specified prefix
+    
     devices = db.child("Devices").get().val()
     filtered_devices = {}
 
@@ -111,10 +99,6 @@ def filter_devices():
             return render_template('home.html', error_message="Unknown product ID prefix")
     else:
         return render_template('home.html', error_message="No devices found for the selected module")
-
-
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
