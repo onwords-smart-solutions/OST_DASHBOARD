@@ -141,15 +141,22 @@
                                 
                                 <div class="device-information-con">
                                     <div class="online-option">
-                                        <div class="online">
-                                            <p class="circle circle-on"></p>
-                                            <p class="online-text on-text">Online</p>
-                                        </div>
-                                        <div class="online offline">
-                                            <p class="circle circle-off"></p>
-                                            <p class="online-text off-text">Online</p>
-                                        </div>
+                                        
+                                        {% if device_info['disconnected_time'] %}
+                                          
+                                            <div class="online offline">
+                                                <p class="circle circle-off"></p>
+                                                <p class="online-text off-text">Offline</p>
+                                            </div>
+                                        {% else %}
+                                            
+                                            <div class="online">
+                                                <p class="circle circle-on"></p>
+                                                <p class="online-text on-text">Online</p>
+                                            </div>
+                                        {% endif %}
                                     </div>
+                                    
                                     <table class="table table-li">
                                         <tbody>
                                             <tr class="table-row">

@@ -144,28 +144,23 @@
                                 
                                 <div class="device-information-con">
                                     <div class="online-option">
+                                        
                                         {% if device_info['disconnected_time'] %}
-                                        {% set disconnected_time_available = false %}
-                                        {% for uid, time_info in device_info['disconnected_time'].items() %}
-                                            {% if time_info['date'] and time_info['time'] %}
-                                                {% set disconnected_time_available = true %}
-                                            {% endif %}
-                                        {% endfor %}
-                                        {# Debug information #}
-                                        <p>Disconnected Time Available: {{ disconnected_time_available }}</p>
-                                        {% if disconnected_time_available %}
+                                          
                                             <div class="online offline">
                                                 <p class="circle circle-off"></p>
                                                 <p class="online-text off-text">Offline</p>
                                             </div>
                                         {% else %}
+                                            
                                             <div class="online">
                                                 <p class="circle circle-on"></p>
                                                 <p class="online-text on-text">Online</p>
                                             </div>
                                         {% endif %}
-                                        {% endif %}
                                     </div>
+                                    
+                                    
                                     <table class="table table-li">
                                         <tbody>
                                             <tr class="table-row">
