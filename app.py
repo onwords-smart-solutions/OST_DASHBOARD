@@ -1,27 +1,19 @@
 from flask import Flask, render_template, request, redirect, url_for
-import os
-import pyrebase
-import uuid
-import datetime
+import os, datetime, uuid, pyrebase, firebase_admin, string, random
+from firebase_admin import credentials, db
 
 app = Flask(__name__)
 
-config = {
-    "apiKey": "AIzaSyCGCrFViSsursoizS3Dgssbsr70Kd3zOYw",
-    "authDomain": "onwords-master-api-db.firebaseapp.com",
-    "projectId": "onwords-master-api-db",
-    "storageBucket": "onwords-master-api-db.appspot.com",
-    "messagingSenderId": "812641457896",
-    "appId": "1:812641457896:web:5226da7ccadaad50009b5d",
-    "measurementId": "G-4TW59PDLHQ",
-    "databaseURL":"https://onwords-master-api-db-default-rtdb.asia-southeast1.firebasedatabase.app"
-    }
-
+config = {"apiKey": "AIzaSyCGCrFViSsursoizS3Dgssbsr70Kd3zOYw", "authDomain": "onwords-master-api-db.firebaseapp.com", "projectId": "onwords-master-api-db", "storageBucket": "onwords-master-api-db.appspot.com", "messagingSenderId": "812641457896", "appId": "1:812641457896:web:5226da7ccadaad50009b5d", "measurementId": "G-4TW59PDLHQ", "databaseURL":"https://onwords-master-api-db-default-rtdb.asia-southeast1.firebasedatabase.app"}
+cred = credentials.Certificate('./onwords-master-api-db-firebase-adminsdk-wm2h8-f633e49651.json')
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://onwords-master-api-db-default-rtdb.asia-southeast1.firebasedatabase.app'
+})
 firebase = pyrebase.initialize_app(config)
 db = firebase.database()
 auth = firebase.auth()
 
-firmware_directory = '/firmware/3chfb'
+firmware_directory = '/firmware'
 
 app.jinja_env.globals['cache'] = False
 
@@ -38,7 +30,6 @@ def home():
             error_message = "Product ID is required."
         else:
             device_data = db.child("Devices").child(product_id).get().val()
-
             if not device_data:
                 error_message = "Product ID not found."
             else:
@@ -48,6 +39,11 @@ def home():
                         online_status = "Offline"
 
     return render_template('home.html', device_data=device_data, error_message=error_message, online_status=online_status)
+
+def generate_custom_uid(length):
+    characters = string.ascii_letters + string.digits
+    custom_uid = ''.join(random.choice(characters) for _ in range(length))
+    return custom_uid
 
 @app.route('/upload_firmware', methods=['POST'])
 def upload_firmware():
@@ -60,16 +56,18 @@ def upload_firmware():
 
     if firmware_file:
         os.makedirs(firmware_directory, exist_ok=True)
-        
-        new_firmware_ref = db.child("Devices").child(product_id).child("firmware").push({
-            "filename": firmware_file.filename,
-            "upload_date": datetime.date.today().strftime("%Y-%m-%d"),
-            "version": "1.1.1"
-        })
-        
-        firmware_uid = new_firmware_ref["name"]
+
+        firmware_uid = generate_custom_uid(20)
         firmware_file.save(os.path.join(firmware_directory, firmware_uid))
-        print(f"Firmware file '{firmware_uid}' saved to {firmware_directory}")
+
+        devices_ref = db.child('Devices')
+        nodes_to_update = devices_ref.order_by_key().start_at(product_id).end_at(product_id + "\uf8ff").get()
+
+        if nodes_to_update and isinstance(nodes_to_update.val(), dict):
+            for node_key, node_value in nodes_to_update.val().items():
+                firmware_path = f"{node_key}/firmware/{firmware_uid}"
+                firmware_data = { "filename": firmware_file.filename, "upload_date": datetime.date.today().strftime("%Y-%m-%d"), "version": "1.1.1"}
+                devices_ref.child('Devices').child(node_key).child('firmware').child(firmware_uid).update(firmware_data)
 
     return redirect(url_for('home'))
 
@@ -101,4 +99,4 @@ def filter_devices():
         return render_template('home.html', error_message="No devices found for the selected module")
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=8080)
+    app.run(debug=True, host="0.0.0.0", port=5000)
